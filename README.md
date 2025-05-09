@@ -1,7 +1,8 @@
 # Akka.NET with Python AI Agents
 
-<p align="center"><img src="assets/actorsystem.png" alt="Actor System Diagram" width="75%"><br /></p>
-*Figure 1: High-level architecture showing concurrent user requests processed by Akka.NET actors which leverage Python scripts for AI agent interactions with an external LLM.*
+<p align="center"><img src="assets/actorsystem.png" alt="Actor System Diagram" width="75%"></p>
+
+* Figure 1: High-level architecture showing concurrent user requests processed by Akka.NET actors which leverage Python scripts for AI agent interactions with an external LLM.*
 
 This project demonstrates an Akka.NET application that integrates with Python scripts using Python.NET. 
 It features a `RequestManagerActor` that receives simulated concurrent requests. For each request, it spawns a short-lived `ChatAgent` worker actor. Each `ChatAgent` is capable of executing functions within a Python script, passing unique `SessionId` and `UserId` parameters for traceability, and then terminates itself.
