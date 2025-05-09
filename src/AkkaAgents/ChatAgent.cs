@@ -11,47 +11,88 @@ namespace AkkaAgents
 
         public ChatAgent()
         {
-            // Initialize Python engine if not already initialized
+            var scriptName = "script.py";
+            var scriptPath = Path.Combine(AppContext.BaseDirectory, scriptName); 
+            var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+            var venvSitePackages = Path.Combine(workspaceRoot, ".venv", "lib", "python3.13", "site-packages");
+                                                                     
             if (!PythonEngine.IsInitialized)
             {
+                // User sets PYTHONNET_PYDLL and PYTHONHOME in shell
+                Console.WriteLine("Attempting to initialize PythonEngine. Ensure PYTHONNET_PYDLL and PYTHONHOME are set correctly in your shell.");
                 PythonEngine.Initialize();
-                PythonEngine.BeginAllowThreads(); // Important for Akka.NET
+                PythonEngine.BeginAllowThreads();
             }
 
-            // Load the Python script
-            var scriptPath = Path.Combine(AppContext.BaseDirectory, "script.py");
             if (!File.Exists(scriptPath))
             {
-                Console.WriteLine($"Error: Python script not found at {scriptPath}. ChatAgent will not process messages via Python.");
-                // _pythonScript remains null
+                Console.WriteLine($"Error: Python script '{scriptName}' not found at {scriptPath}. ChatAgent will not process messages via Python.");
             }
             else
             {
                 try
                 {
-                    using (Py.GIL()) // Acquire the Global Interpreter Lock
+                    using (Py.GIL()) 
                     {
-                        // Add the directory of the script to Python's sys.path
-                        // to ensure modules in the same directory can be imported if needed.
                         dynamic sys = Py.Import("sys");
-                        sys.path.append(AppContext.BaseDirectory);
-                        _pythonScript = Py.Import(Path.GetFileNameWithoutExtension(scriptPath));
+                        Console.WriteLine($"Python sys.executable before sys.path append: {sys.executable}");
+                        Console.WriteLine($"Python sys.prefix before sys.path append: {sys.prefix}");
+                        Console.WriteLine($"Python sys.path before sys.path append: {sys.path}");
+
+                        string scriptDir = AppContext.BaseDirectory;
+                        bool scriptDirInPath = false;
+                        foreach (PyObject p in sys.path) {
+                            if (p.ToString() == scriptDir) {
+                                scriptDirInPath = true;
+                                break;
+                            }
+                        }
+                        if (!scriptDirInPath) {
+                            sys.path.append(scriptDir);
+                            Console.WriteLine($"Appended to sys.path: {scriptDir}");
+                        }
+                        
+                        if (Directory.Exists(venvSitePackages)) 
+                        {
+                            bool venvSiteInPath = false;
+                            foreach (PyObject p in sys.path) {
+                                if (p.ToString() == venvSitePackages) {
+                                    venvSiteInPath = true;
+                                    break;
+                                }
+                            }
+                            if (!venvSiteInPath) {
+                                sys.path.append(venvSitePackages);
+                                Console.WriteLine($"Appended to sys.path: {venvSitePackages}");
+                            }
+                        }
+                        else {
+                            Console.WriteLine($"Warning: venv site-packages directory not found for sys.path append: {venvSitePackages}");
+                        }
+                        
+                        Console.WriteLine($"Python sys.path after sys.path append: {sys.path}");
+                        
+                        _pythonScript = Py.Import(Path.GetFileNameWithoutExtension(scriptName));
+                        Console.WriteLine($"Successfully imported Python script: {scriptName}");
                     }
                 }
                 catch (PythonException ex)
                 {
                     Console.WriteLine($"PythonException during script import in ChatAgent: {ex.Message}");
                     Console.WriteLine($"Python StackTrace: {ex.StackTrace}");
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-                    }
-                     // _pythonScript remains null
+                    if (ex.InnerException != null) Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                    try {
+                        using(Py.GIL()){
+                             dynamic sys = Py.Import("sys");
+                             Console.WriteLine($"Python sys.executable on error: {sys.executable}");
+                             Console.WriteLine($"Python sys.prefix on error: {sys.prefix}");
+                             Console.WriteLine($"Python sys.path on error: {sys.path}");
+                        }
+                    } catch {}
                 }
                 catch (Exception ex)
                 {
                      Console.WriteLine($"Generic Exception during script import in ChatAgent: {ex.Message}");
-                     // _pythonScript remains null
                 }
             }
 
@@ -60,15 +101,12 @@ namespace AkkaAgents
                 if (_pythonScript == null)
                 {
                     Console.WriteLine($"ChatAgent cannot process message: Python script was not loaded successfully.");
-                    // Optionally, you could send a failure message back to the sender
-                    // Sender.Tell(new ScriptProcessingFailed(message, "Python script not loaded"));
                     return;
                 }
-
                 string response = "Error processing message with Python.";
                 try
                 {
-                    using (Py.GIL()) // Acquire GIL for this operation
+                    using (Py.GIL()) 
                     {
                         dynamic result = _pythonScript.InvokeMethod("process_message", new PyString(message));
                         response = result.ToString();
@@ -79,10 +117,7 @@ namespace AkkaAgents
                 {
                     Console.WriteLine($"PythonException in ChatAgent: {ex.Message}");
                     Console.WriteLine($"Python StackTrace: {ex.StackTrace}");
-                     if (ex.InnerException != null)
-                    {
-                        Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-                    }
+                     if (ex.InnerException != null) Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
                 }
                 catch (Exception ex)
                 {
@@ -103,7 +138,6 @@ namespace AkkaAgents
 
         protected override void PostStop()
         {
-            // PythonEngine.Shutdown(); // Typically shutdown when the ActorSystem terminates
             base.PostStop();
             Console.WriteLine("ChatAgent stopped.");
         }
