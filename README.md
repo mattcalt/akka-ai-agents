@@ -25,11 +25,18 @@ This project demonstrates an Akka.NET application that integrates with Python sc
     *(On Windows, activation is `.venv\Scripts\activate`)*
 
 3.  **Install Python Dependencies:**
-    While the virtual environment is active, install required packages. For the example `script.py`:
+    With the virtual environment activated, install the required Python packages using the `requirements.txt` file located at the project root:
     ```bash
-    pip install emoji
+    pip install -r requirements.txt
     ```
-    *(Add any other dependencies your Python scripts might need here.)*
+    This file lists all necessary Python packages and their versions for the project to run correctly.
+
+    **Note for Developers (Generating `requirements.txt`):**
+    If you add or update Python dependencies while working on the project, you should regenerate the `requirements.txt` file. Ensure your virtual environment is active and from the project root directory, run:
+    ```bash
+    pip freeze > requirements.txt
+    ```
+    Commit this updated file to version control.
 
 4.  **Set Environment Variables:**
     Before running the .NET application, you **must** set the following environment variables in your terminal session where you intend to run `dotnet run`. **Ensure your virtual environment is active when setting these.**
