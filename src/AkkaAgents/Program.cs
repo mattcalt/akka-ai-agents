@@ -14,7 +14,7 @@ namespace AkkaAgents
 
             // Create an instance of our ChatAgent
             var chatAgent = system.ActorOf<ChatAgent>("chatAgent");
-            chatAgent.Tell("Can you process this message in Python?");
+            chatAgent.Tell("What tools do you have access to?");
 
             // Keep the system alive until a key is pressed
             Console.WriteLine("Press any key to exit...");
