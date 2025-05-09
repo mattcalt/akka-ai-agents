@@ -35,37 +35,52 @@ class ChatAgent:
     def __init__(self):
         self._agent = None
         self._exit_stack = AsyncExitStack()
-        # We'll initialize these when creating a new session now, not at class init
         self.session_id = None
+        self.user_id = None # Initialize user_id
         logger.info("Initialized ChatAgent factory")
 
-    def create_new_session(self):
-        """Creates a new session with unique ID"""
-        self.session_id = str(uuid.uuid4())
-        logger.info(f"Created new agent session {self.session_id}")
-        # Reset agent so it will be recreated with the new session context
-        self._agent = None
-        return self.session_id
+    def create_new_session(self, session_id_override=None, user_id_override=None):
+        """Creates/sets session ID and user ID."""
+        if session_id_override:
+            self.session_id = session_id_override
+            logger.info(f"Using provided session ID: {self.session_id}")
+        else:
+            self.session_id = str(uuid.uuid4())
+            logger.info(f"Created new agent session (generated): {self.session_id}")
+        
+        if user_id_override:
+            self.user_id = user_id_override
+            logger.info(f"Using provided user ID: {self.user_id}")
+        else:
+            self.user_id = f"default_user_{self.session_id[:8]}" # Default if not provided
+            logger.info(f"Using default generated user ID: {self.user_id}")
+
+        self._agent = None 
+        return self.session_id, self.user_id
     
     @property
     async def root_agent(self):
         if self._agent is None:
-            # Ensure we have a session
-            if not self.session_id:
+            if not self.session_id or not self.user_id:
                 self.create_new_session()
             await self._build_agent()
         return self._agent, self._exit_stack
     
     async def _build_agent(self):
+        if not self.session_id or not self.user_id:
+            logger.warning("session_id or user_id not set before _build_agent. Attempting to set defaults.")
+            # Fallback, though create_new_session should be called via initialize
+            self.create_new_session(session_id_override=self.session_id, user_id_override=self.user_id)
 
         self.general_llm = LiteLlm(
             model='gpt-4o-mini',
             api_base=os.environ['OPENAI_BASE'],
             api_key=os.environ['OPENAI_KEY'],
-            user="coding_agent",
+            user=self.user_id, # Use the instance's user_id
             extra_body={
                 "metadata": {
-                        "session_id": self.session_id  # Pass the session ID
+                        "session_id": self.session_id,  # Pass the session ID
+                        "user_id": self.user_id  # Pass the user_id
                 }
             }
         )
@@ -80,10 +95,12 @@ class ChatAgent:
 
         return self._agent, self._exit_stack
 
-    async def initialize(self):
-        """Initialize the agent with a new session if needed."""
-        if not self.session_id:
-            self.create_new_session()
+    async def initialize(self, session_id_override=None, user_id_override=None):
+        """Initialize the agent, using overridden session and user IDs if provided."""
+        # Ensure session_id and user_id are set, potentially using overrides
+        if not self.session_id or session_id_override or not self.user_id or user_id_override:
+            self.create_new_session(session_id_override=session_id_override, user_id_override=user_id_override)
+        
         if self._agent is None:
             self._agent, self._exit_stack = await self._build_agent()
 

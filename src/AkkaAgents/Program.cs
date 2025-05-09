@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Python.Runtime; // Add this for PythonEngine.Shutdown
+using System;
 
 namespace AkkaAgents
 {
@@ -13,16 +14,18 @@ namespace AkkaAgents
             // Create an instance of our RequestManagerActor
             var requestManager = system.ActorOf<RequestManagerActor>("requestManager");
 
-            int numberOfParallelRequests = 25; // Configurable number of requests
+            int numberOfParallelRequests = 10; // Configurable number of requests
             Console.WriteLine($"Simulating {numberOfParallelRequests} parallel requests...");
 
             for (int i = 0; i < numberOfParallelRequests; i++)
             {
                 // Simulate slightly different requests
-                string requestText = $"What are the best practices for async programming? Please respond with the RequestId at the end of your response. RequestId: {i + 1}";
-                // Send a ProcessTextRequest message to the manager
-                // In a real HTTP scenario, this would come from an HTTP request handler.
-                requestManager.Tell(new ProcessTextRequest(requestText));
+                string requestId = $"req_{i + 1:D3}"; // e.g., req_001
+                string sessionId = $"{Guid.NewGuid().ToString().Substring(0, 8)}-{requestId}"; // Unique session ID for each request
+                string userId = $"akka_user_{requestId}"; // Generate UserId
+                string requestText = $"What are the best practices for async programming? Please respond with the RequestId at the end of your response. RequestId: {requestId}";
+                
+                requestManager.Tell(new ProcessTextRequest(requestText, sessionId, userId));
 
                 // Add a small delay to stagger requests slightly and make logs easier to follow
                 // In a real scenario, requests would arrive at their own pace.

@@ -15,18 +15,17 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def process_message(message_body: str):
-    """Processes a single message using the ChatAgent directly."""
-    logger.info(f"Processing message: {message_body[:100]}...") 
+async def process_message(message_body: str, session_id: str, user_id: str):
+    """Processes a single message using the ChatAgent directly, with provided session_id and user_id."""
+    logger.info(f"Processing message: {message_body[:100]}... for session_id: {session_id}, user_id: {user_id}") 
     model_response_parts = [] # To store parts of the model's response
     
     try:
-        # Create a new session for this message
-        session_id = chat_agent_instance.create_new_session()
-        logger.info(f"Created new ChatAgent session: {session_id}")
+        # Use the provided session_id and user_id to create/initialize the agent session
+        chat_agent_instance.create_new_session(session_id_override=session_id, user_id_override=user_id)
+        logger.info(f"ChatAgent session set to: {session_id}, user_id: {user_id}")
         
-        # Initialize the agent with the new session
-        await chat_agent_instance.initialize()
+        await chat_agent_instance.initialize() # Will use the session_id and user_id set by create_new_session
         
         # Get the initialized ChatAgent's actual LLM agent 
         actual_chat_agent = chat_agent_instance._agent 
@@ -56,9 +55,9 @@ async def process_message(message_body: str):
         # as the initial message for the run.
         logger.info(f"Running ChatAgent for session: {session_id}")
         async for event in runner.run_async(
-            new_message=initial_message, # Pass the REAL message content here
+            new_message=initial_message, 
             user_id="queue_trigger", 
-            session_id=session_id
+            session_id=session_id # Pass session_id to runner as well
         ):
             logger.info(f"[Session: {session_id}] Event: {event}")
             # Check if the event is from the chat_agent, its content is from the model, and has text

@@ -13,26 +13,25 @@ namespace AkkaAgents
             // This instance will load "Scripts/script.py".
             _scriptExecutor = new PythonScriptExecutor("Scripts/script.py");
 
-            Receive<string>(message =>
+            Receive<ProcessTextRequest>(request =>
             {
                 if (!_scriptExecutor.IsScriptLoaded)
                 {
-                    Console.WriteLine($"ChatAgent: Python script was not loaded by PythonScriptExecutor. Cannot process message: {message}");
-                    // Potentially tell the sender about the failure if this actor is part of a request/reply flow.
-                    // Sender.Tell(new ScriptProcessingError($"Script not loaded, cannot process: {message}"));
+                    Console.WriteLine($"ChatAgent ({Self.Path.Name}): Python script not loaded. Cannot process SessionId: {request.SessionId}, UserId: {request.UserId}, Message: {request.Text}");
+                    Context.Stop(Self);
                     return;
                 }
 
-                string? response = _scriptExecutor.ExecuteFunction("process_message", message);
+                Console.WriteLine($"ChatAgent ({Self.Path.Name}): Processing SessionId: {request.SessionId}, UserId: {request.UserId}, Message: '{request.Text.Substring(0, Math.Min(request.Text.Length, 20))}...'");
+                string? response = _scriptExecutor.ExecuteFunction("process_message", request.Text, request.SessionId, request.UserId);
 
                 if (response != null)
                 {
-                    Console.WriteLine($"ChatAgent received: {message}, Python responded: {response}");
+                    Console.WriteLine($"ChatAgent ({Self.Path.Name}) received for SessionId {request.SessionId}, UserId {request.UserId}: '{request.Text.Substring(0, Math.Min(request.Text.Length, 20))}...', Python responded: {response}");
                 }
                 else
                 {
-                    // Error details would have been logged by PythonScriptExecutor
-                    Console.WriteLine($"ChatAgent: Failed to get a response from Python for message: {message}");
+                    Console.WriteLine($"ChatAgent ({Self.Path.Name}): Failed for SessionId {request.SessionId}, UserId {request.UserId}, Message: '{request.Text.Substring(0, Math.Min(request.Text.Length, 20))}...'");
                 }
 
                 // After processing, the ChatAgent stops itself.
