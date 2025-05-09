@@ -4,8 +4,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from contextlib import AsyncExitStack
-import uuid
-
+# import uuid # No longer generating UUIDs here
 
 # Load environment variables
 load_dotenv()
@@ -33,81 +32,55 @@ class ChatAgent:
     SUPPORTED_CONTENT_TYPES = ["text/plain", "application/json"]
 
     def __init__(self):
-        self._agent = None
-        self._exit_stack = AsyncExitStack()
-        self.session_id = None
-        self.user_id = None # Initialize user_id
-        logger.info("Initialized ChatAgent factory")
-
-    def create_new_session(self, session_id_override=None, user_id_override=None):
-        """Creates/sets session ID and user ID."""
-        if session_id_override:
-            self.session_id = session_id_override
-            logger.info(f"Using provided session ID: {self.session_id}")
-        else:
-            self.session_id = str(uuid.uuid4())
-            logger.info(f"Created new agent session (generated): {self.session_id}")
+        # No per-instance session_id or user_id. These will be passed per call.
+        self._exit_stack = AsyncExitStack() # Reusable for context management if needed
+        logger.info("Initialized ChatAgent factory (now stateless regarding session/user IDs)")
+    
+    async def _build_agent(self, session_id_for_build: str, user_id_for_build: str):
+        if not session_id_for_build or not user_id_for_build:
+            raise ValueError("session_id_for_build and user_id_for_build must be provided to _build_agent.")
         
-        if user_id_override:
-            self.user_id = user_id_override
-            logger.info(f"Using provided user ID: {self.user_id}")
-        else:
-            self.user_id = f"default_user_{self.session_id[:8]}" # Default if not provided
-            logger.info(f"Using default generated user ID: {self.user_id}")
+        logger.info(f"_build_agent: Building with session_id: {session_id_for_build}, user_id: {user_id_for_build}")
 
-        self._agent = None 
-        return self.session_id, self.user_id
-    
-    @property
-    async def root_agent(self):
-        if self._agent is None:
-            if not self.session_id or not self.user_id:
-                self.create_new_session()
-            await self._build_agent()
-        return self._agent, self._exit_stack
-    
-    async def _build_agent(self):
-        if not self.session_id or not self.user_id:
-            logger.warning("session_id or user_id not set before _build_agent. Attempting to set defaults.")
-            # Fallback, though create_new_session should be called via initialize
-            self.create_new_session(session_id_override=self.session_id, user_id_override=self.user_id)
-
-        self.general_llm = LiteLlm(
+        current_llm = LiteLlm(
             model='gpt-4o-mini',
             api_base=os.environ['OPENAI_BASE'],
             api_key=os.environ['OPENAI_KEY'],
-            user=self.user_id, # Use the instance's user_id
-            extra_body={
+            user=user_id_for_build,
+            extra_body={ # Used for Langfuse data
                 "metadata": {
-                        "session_id": self.session_id,  # Pass the session ID
-                        "user_id": self.user_id  # Pass the user_id
+                        "session_id": session_id_for_build,
+                        "user_id": user_id_for_build 
                 }
             }
         )
 
-        self._agent = LlmAgent(
+        built_agent = LlmAgent(
             name="chat_agent",
-            model=self.general_llm,
+            model=current_llm,
             description="An agent that can chat with the user.",
             before_model_callback=inject_initial_message_callback,
             instruction="You are a helpful assistant that can answer questions and help with tasks.",
         )
+        # The exit_stack is for managing resources that current_llm or built_agent might need.
+        # If they don't register anything with it, it's benign.
+        return built_agent, self._exit_stack 
 
-        return self._agent, self._exit_stack
-
-    async def initialize(self, session_id_override=None, user_id_override=None):
-        """Initialize the agent, using overridden session and user IDs if provided."""
-        # Ensure session_id and user_id are set, potentially using overrides
-        if not self.session_id or session_id_override or not self.user_id or user_id_override:
-            self.create_new_session(session_id_override=session_id_override, user_id_override=user_id_override)
+    async def initialize(self, session_id: str, user_id: str):
+        """Initializes and returns a new LlmAgent instance configured with the provided session and user IDs."""
+        if not session_id or not user_id:
+            raise ValueError("session_id and user_id are mandatory for initialize.")
         
-        if self._agent is None:
-            self._agent, self._exit_stack = await self._build_agent()
+        logger.info(f"ChatAgent.initialize: Creating new agent for session_id: {session_id}, user_id: {user_id}")
+        # Always build a new agent for each initialization, ensuring fresh state for the call.
+        # The returned agent from _build_agent IS the one to use for the current request.
+        initialized_agent, exit_stack = await self._build_agent(session_id_for_build=session_id, user_id_for_build=user_id)
+        return initialized_agent # Return the agent directly
 
-# Create singleton instance
-agent = ChatAgent()
+# Create singleton instance of the factory/helper class
+agent_factory = ChatAgent() # Renamed to clarify its role
 
-async def get_root_agent():
-    return await agent.root_agent
-
-root_agent = get_root_agent 
+# Remove old root_agent as it's not compatible with per-request ID passing
+# async def get_root_agent():
+#     return await agent.root_agent
+# root_agent = get_root_agent 

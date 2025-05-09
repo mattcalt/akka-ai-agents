@@ -14,14 +14,15 @@ namespace AkkaAgents
             // Create an instance of our RequestManagerActor
             var requestManager = system.ActorOf<RequestManagerActor>("requestManager");
 
-            int numberOfParallelRequests = 10; // Configurable number of requests
+            int numberOfParallelRequests = 25; // Configurable number of requests
             Console.WriteLine($"Simulating {numberOfParallelRequests} parallel requests...");
+            string sessionId = $"{Guid.NewGuid().ToString().Substring(0, 8)}"; // Unique session ID for each request
 
-            for (int i = 0; i < numberOfParallelRequests; i++)
+            for (int i = 0; i <= numberOfParallelRequests; i++)
             {
                 // Simulate slightly different requests
                 string requestId = $"req_{i + 1:D3}"; // e.g., req_001
-                string sessionId = $"{Guid.NewGuid().ToString().Substring(0, 8)}-{requestId}"; // Unique session ID for each request
+                //string sessionId = $"{Guid.NewGuid().ToString().Substring(0, 8)}-{requestId}"; // Unique session ID for each request
                 string userId = $"akka_user_{requestId}"; // Generate UserId
                 string requestText = $"What are the best practices for async programming? Please respond with the RequestId at the end of your response. RequestId: {requestId}";
                 

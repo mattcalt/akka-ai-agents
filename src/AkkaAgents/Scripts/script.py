@@ -5,8 +5,8 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 from dotenv import load_dotenv
 
-# Import the chat agent singleton and initialize it directly
-from chat_agent.agent import agent as chat_agent_instance
+# Import the chat agent factory
+from chat_agent.agent import agent_factory # Use the renamed agent_factory
 
 # Load environment variables (ensure it's loaded)
 load_dotenv()
@@ -16,34 +16,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def process_message(message_body: str, session_id: str, user_id: str):
-    """Processes a single message using the ChatAgent directly, with provided session_id and user_id."""
+    """Processes a single message using a newly initialized ChatAgent for the provided session_id and user_id."""
     logger.info(f"Processing message: {message_body[:100]}... for session_id: {session_id}, user_id: {user_id}") 
     model_response_parts = [] # To store parts of the model's response
     
     try:
-        # Use the provided session_id and user_id to create/initialize the agent session
-        chat_agent_instance.create_new_session(session_id_override=session_id, user_id_override=user_id)
-        logger.info(f"ChatAgent session set to: {session_id}, user_id: {user_id}")
+        # Initialize a new agent instance for this specific request using the factory
+        # This agent is configured with the current request's session_id and user_id.
+        current_chat_agent = await agent_factory.initialize(session_id=session_id, user_id=user_id)
         
-        await chat_agent_instance.initialize() # Will use the session_id and user_id set by create_new_session
-        
-        # Get the initialized ChatAgent's actual LLM agent 
-        actual_chat_agent = chat_agent_instance._agent 
-        if actual_chat_agent is None:
-             raise RuntimeError("ChatAgent has not been initialized properly.")
+        if current_chat_agent is None:
+             raise RuntimeError("ChatAgent could not be initialized properly with provided IDs.")
 
-        # Create session service for this message processing run
         session_service = InMemorySessionService()
         
-        session = session_service.create_session(
+        # The session for the runner should also use the specific session_id
+        runner_session = session_service.create_session(
             app_name="queue_processor", 
-            user_id="queue_trigger",
-            session_id=session_id  # Now using the same session_id as ChatAgent
+            user_id=user_id, # Pass user_id here as well
+            session_id=session_id
         )
         
-        # Create runner with ChatAgent as the root agent
         runner = Runner(
-            agent=actual_chat_agent, 
+            agent=current_chat_agent, # Use the agent initialized for this request
             app_name="queue_processor",
             session_service=session_service
         )
@@ -53,11 +48,11 @@ async def process_message(message_body: str, session_id: str, user_id: str):
         
         # Run the chat agent directly, passing the actual message content
         # as the initial message for the run.
-        logger.info(f"Running ChatAgent for session: {session_id}")
+        logger.info(f"Running ChatAgent for session: {session_id}, user_id: {user_id}")
         async for event in runner.run_async(
             new_message=initial_message, 
-            user_id="queue_trigger", 
-            session_id=session_id # Pass session_id to runner as well
+            user_id=user_id, # Pass user_id to runner
+            session_id=session_id
         ):
             logger.info(f"[Session: {session_id}] Event: {event}")
             # Check if the event is from the chat_agent, its content is from the model, and has text
