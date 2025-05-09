@@ -1,6 +1,10 @@
-# Akka.NET Agents with Python Integration
+# Akka.NET with Python AI Agents
 
-This project demonstrates an Akka.NET application that integrates with Python scripts using Python.NET. It includes a `ChatAgent` actor capable of executing functions within a Python script.
+<p align="center"><img src="assets/actorsystem.png" alt="Actor System Diagram" width="75%"><br /></p>
+*Figure 1: High-level architecture showing concurrent user requests processed by Akka.NET actors which leverage Python scripts for AI agent interactions with an external LLM.*
+
+This project demonstrates an Akka.NET application that integrates with Python scripts using Python.NET. 
+It features a `RequestManagerActor` that receives simulated concurrent requests. For each request, it spawns a short-lived `ChatAgent` worker actor. Each `ChatAgent` is capable of executing functions within a Python script, passing unique `SessionId` and `UserId` parameters for traceability, and then terminates itself.
 
 ## Prerequisites
 
@@ -31,13 +35,6 @@ This project demonstrates an Akka.NET application that integrates with Python sc
     ```
     This file lists all necessary Python packages and their versions for the project to run correctly.
 
-    **Note for Developers (Generating `requirements.txt`):**
-    If you add or update Python dependencies while working on the project, you should regenerate the `requirements.txt` file. Ensure your virtual environment is active and from the project root directory, run:
-    ```bash
-    pip freeze > requirements.txt
-    ```
-    Commit this updated file to version control.
-
 4.  **Set Environment Variables:**
     Before running the .NET application, you **must** set the following environment variables in your terminal session where you intend to run `dotnet run`. **Ensure your virtual environment is active when setting these.**
 
@@ -55,16 +52,29 @@ This project demonstrates an Akka.NET application that integrates with Python sc
             ```
         *   Adjust this path based on your Python installation. It's often the directory containing `lib` and `include` for your Python version.
 
-    *   **Optional: `PYTHONPATH`** (for reference, primarily handled by C# code)
-        The C# code dynamically adds necessary paths to Python's `sys.path`. However, if you were running Python scripts directly or for other tools, `PYTHONPATH` would point to your venv's `site-packages` and any script directories. For this application, the C# code appends:
-        *   The application's output directory (e.g., `src/AkkaAgents/bin/Debug/net8.0/`) for the main script.
-        *   The venv's `site-packages` directory (e.g., `.venv/lib/python3.13/site-packages/`).
-        If you were to set it manually for other purposes:
+    *   **`OPENAI_BASE`**: The base URL for your LiteLLM or OpenAI-compatible proxy.
+        *   Example:
+            ```bash
+            export OPENAI_BASE="http://litellm.localtest.me"
+            ```
+        *   This is used by the Python agent (`Scripts/chat_agent/agent.py`) to connect to the LLM.
+
+    *   **`OPENAI_KEY`**: The API key for your LLM service (can be a placeholder if your proxy doesn't require it, but the variable should be set).
+        *   Example (if your proxy handles actual key management):
+            ```bash
+            export OPENAI_KEY="your_openai_or_proxy_api_key"
+            ```
+        *   This is used by the Python agent (`Scripts/chat_agent/agent.py`).
+
+    *   **Optional: `PYTHONPATH`** (for reference, primarily handled by C# code during runtime)
+        The C# `PythonScriptExecutor` dynamically adds all necessary paths to Python's `sys.path` at runtime. This includes the application's output directory (where scripts are copied) and the Python virtual environment's `site-packages`. Therefore, setting `PYTHONPATH` manually in your shell is generally **not required** for this application to function correctly.
+
+        If you were to set it for other external tools or direct Python script execution outside this app, it might look like this:
         ```bash
-        # export PYTHONPATH="/path/to/your/project/.venv/lib/python3.13/site-packages:/path/to/your/project/src/AkkaAgents/bin/Debug/net8.0" 
+        # Example for external use: export PYTHONPATH="/path/to/your/project/.venv/lib/python3.13/site-packages:/path/to/your/project/src/AkkaAgents/bin/Debug/net8.0"
         ```
 
-    **Note:** These environment variables are set for the current terminal session. For persistent settings, add them to your shell's profile script (e.g., `~/.zshrc`, `~/.bash_profile`, or PowerShell profile).
+    **Note:** These environment variables (`PYTHONNET_PYDLL`, `PYTHONHOME`) are set for the current terminal session. For persistent settings, add them to your shell's profile script (e.g., `~/.zshrc`, `~/.bash_profile`, or PowerShell profile).
 
 ## Running the Application
 
@@ -83,19 +93,20 @@ This project demonstrates an Akka.NET application that integrates with Python sc
     dotnet run
     ```
 
-You should see output from the Akka.NET system, including messages processed by the `ChatAgent` via the Python script.
+You should see output from the Akka.NET system, indicating the `RequestManagerActor` starting, followed by logs for multiple simulated requests. Each request will trigger the creation of a `ChatAgent` (e.g., `ChatAgent ($a)`, `ChatAgent ($b)`), which will process its message via the Python script (showing its unique `SessionId` and `UserId`), print the Python response, and then log that it is stopping.
 
 ## Project Structure
 
 *   `src/AkkaAgents/`: Contains the .NET Akka application.
-    *   `ChatAgent.cs`: Example actor that uses Python.
-    *   `Utilities/PythonScriptExecutor.cs`: Helper class for Python.NET interaction.
+    *   `RequestManagerActor.cs`: Actor responsible for receiving requests and delegating them to `ChatAgent` workers.
+    *   `ChatAgent.cs`: Worker actor that uses Python to process a single request and then terminates.
+    *   `Utilities/PythonScriptExecutor.cs`: Helper class for Python.NET interaction, including `sys.path` management.
     *   `Scripts/script.py`: Example Python script called by `ChatAgent`.
-    *   `Program.cs`: Main entry point for the .NET application.
+    *   `Scripts/chat_agent/agent.py`: Core Python agent logic used by `script.py`.
+    *   `Program.cs`: Main entry point, simulates multiple requests to the `RequestManagerActor`.
     *   `AkkaAgents.csproj`: Project file.
-*   `.venv/`: Python virtual environment (created locally, ignored by Git).
-*   `.gitignore`: Specifies intentionally untracked files.
 *   `README.md`: This file.
+*   `requirements.txt`: Lists Python dependencies for the project.
 
 ## Troubleshooting Python.NET
 
