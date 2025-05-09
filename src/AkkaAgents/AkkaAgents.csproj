@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="script.py">
+    <None Update="Scripts/*.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

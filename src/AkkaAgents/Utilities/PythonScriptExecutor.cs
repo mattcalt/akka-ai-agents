@@ -2,7 +2,7 @@ using Python.Runtime;
 using System;
 using System.IO;
 
-namespace AkkaAgents
+namespace AkkaAgents.Utilities
 {
     public class PythonScriptExecutor : IDisposable
     {
@@ -23,7 +23,12 @@ namespace AkkaAgents
 
         public PythonScriptExecutor(string scriptFileName)
         {
-            _moduleName = Path.GetFileNameWithoutExtension(scriptFileName); // e.g., "script" from "script.py"
+            _moduleName = scriptFileName.Replace(Path.DirectorySeparatorChar, '.').Replace(Path.AltDirectorySeparatorChar, '.');
+            if (_moduleName.ToLower().EndsWith(".py")) // Remove .py extension, case-insensitive
+            {
+                _moduleName = _moduleName.Substring(0, _moduleName.Length - 3);
+            }
+
             string scriptFullPath = Path.Combine(AppContext.BaseDirectory, scriptFileName);
 
             if (!File.Exists(scriptFullPath))

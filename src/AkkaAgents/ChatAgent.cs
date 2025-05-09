@@ -1,5 +1,5 @@
 using Akka.Actor;
-using System; // For Console
+using AkkaAgents.Utilities;
 
 namespace AkkaAgents
 {
@@ -10,8 +10,8 @@ namespace AkkaAgents
         public ChatAgent()
         {
             // The PythonScriptExecutor's static constructor will handle PythonEngine initialization once.
-            // This instance will load "script.py".
-            _scriptExecutor = new PythonScriptExecutor("script.py");
+            // This instance will load "Scripts/script.py".
+            _scriptExecutor = new PythonScriptExecutor("Scripts/script.py");
 
             Receive<string>(message =>
             {
