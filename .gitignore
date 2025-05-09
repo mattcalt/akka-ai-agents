@@ -1,0 +1,82 @@
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio cache files
+.vs/
+*.njsproj
+*.sln.ide
+*.config
+
+# Rider
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build files
+*.vc.db
+*.pdb
+*.lib
+*.dll
+*.exe
+*.nupkg
+*.snupkg
+*.appx
+*.msix
+*.msixbundle
+*.appxbundle
+
+# Test results
+TestResults/
+*.trx
+*.html
+*.xml
+
+# Dotnet files
+project.lock.json
+project.assets.json
+*.nuget.props
+*.nuget.targets
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Python virtual environment
+venv/
+.*/venv/
+env/
+.*/env/
+.env
+.*/.env 
