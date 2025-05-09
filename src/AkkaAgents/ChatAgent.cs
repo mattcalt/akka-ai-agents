@@ -34,6 +34,10 @@ namespace AkkaAgents
                     // Error details would have been logged by PythonScriptExecutor
                     Console.WriteLine($"ChatAgent: Failed to get a response from Python for message: {message}");
                 }
+
+                // After processing, the ChatAgent stops itself.
+                Console.WriteLine($"ChatAgent ({Self.Path.Name}): Processed message. Stopping self.");
+                Context.Stop(Self);
             });
         }
 
