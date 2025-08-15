@@ -1,4 +1,4 @@
 google-adk   
 google-genai
 litellm
-dotenv
+python-dotenv
