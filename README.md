@@ -10,7 +10,7 @@ It features a `RequestManagerActor` that receives simulated concurrent requests.
 ## Prerequisites
 
 1.  **.NET SDK:** Version 8.0 or later.
-2.  **Python:** Version 3.13 (as configured). Ensure it's installed and accessible. This project was developed using Python from Homebrew on macOS.
+2.  **Python:** Version 3.9 or later (developed and tested with 3.13). Ensure it's installed and accessible. This project was developed using Python from Homebrew on macOS.
 3.  **Python Virtual Environment:** The project is set up to use a Python virtual environment for managing Python dependencies.
 
 ## Setup
@@ -40,18 +40,18 @@ It features a `RequestManagerActor` that receives simulated concurrent requests.
     Before running the .NET application, you **must** set the following environment variables in your terminal session where you intend to run `dotnet run`. **Ensure your virtual environment is active when setting these.**
 
     *   **`PYTHONNET_PYDLL`**: Path to your Python shared library.
-        *   For Homebrew Python 3.13 on macOS (example):
+        *   For Homebrew Python on macOS (example for 3.13):
             ```bash
             export PYTHONNET_PYDLL="/opt/homebrew/Frameworks/Python.framework/Versions/3.13/lib/libpython3.13.dylib"
             ```
-        *   Adjust this path based on your Python installation location and version.
+        *   Adjust this path based on your Python installation location and version. For other versions, replace `3.13` with your version (e.g., `3.11`, `3.12`).
 
     *   **`PYTHONHOME`**: Path to the root of your Python installation's library structure.
-        *   For Homebrew Python 3.13 on macOS (example):
+        *   For Homebrew Python on macOS (example for 3.13):
             ```bash
             export PYTHONHOME="/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13"
             ```
-        *   Adjust this path based on your Python installation. It's often the directory containing `lib` and `include` for your Python version.
+        *   Adjust this path based on your Python installation and version. It's the directory containing `lib` and `include` subdirectories for your Python installation.
 
     *   **`OPENAI_BASE`**: The base URL for your LiteLLM or OpenAI-compatible proxy.
         *   Example:
@@ -59,6 +59,7 @@ It features a `RequestManagerActor` that receives simulated concurrent requests.
             export OPENAI_BASE="http://litellm.localtest.me"
             ```
         *   This is used by the Python agent (`Scripts/chat_agent/agent.py`) to connect to the LLM.
+        *   **Note**: Despite using Google AI SDK libraries (google-adk, google-genai), the agent connects to LiteLLM which can proxy requests to various LLM providers including OpenAI, Google, Anthropic, etc.
 
     *   **`OPENAI_KEY`**: The API key for your LLM service (can be a placeholder if your proxy doesn't require it, but the variable should be set).
         *   Example (if your proxy handles actual key management):
@@ -66,14 +67,16 @@ It features a `RequestManagerActor` that receives simulated concurrent requests.
             export OPENAI_KEY="your_openai_or_proxy_api_key"
             ```
         *   This is used by the Python agent (`Scripts/chat_agent/agent.py`).
+        *   **Note**: This key should match whatever your LiteLLM proxy expects (could be OpenAI, Google AI Studio, or other provider keys).
 
     *   **Optional: `PYTHONPATH`** (for reference, primarily handled by C# code during runtime)
         The C# `PythonScriptExecutor` dynamically adds all necessary paths to Python's `sys.path` at runtime. This includes the application's output directory (where scripts are copied) and the Python virtual environment's `site-packages`. Therefore, setting `PYTHONPATH` manually in your shell is generally **not required** for this application to function correctly.
 
         If you were to set it for other external tools or direct Python script execution outside this app, it might look like this:
         ```bash
-        # Example for external use: export PYTHONPATH="/path/to/your/project/.venv/lib/python3.13/site-packages:/path/to/your/project/src/AkkaAgents/bin/Debug/net8.0"
+        # Example for external use: export PYTHONPATH="/path/to/your/project/.venv/lib/python3.x/site-packages:/path/to/your/project/src/AkkaAgents/bin/Debug/net8.0"
         ```
+        (Replace `3.x` with your Python version)
 
     **Note:** These environment variables (`PYTHONNET_PYDLL`, `PYTHONHOME`) are set for the current terminal session. For persistent settings, add them to your shell's profile script (e.g., `~/.zshrc`, `~/.bash_profile`, or PowerShell profile).
 
@@ -117,6 +120,6 @@ You should see output from the Akka.NET system, indicating the `RequestManagerAc
     *   Ensure the script is being copied to the output directory (check `.csproj`).
     *   Ensure `AppContext.BaseDirectory` (where the host .NET app runs) is effectively part of Python's `sys.path` when the script is imported. The `PythonScriptExecutor` attempts to add this.
 *   **`No module named 'your_python_package'` (e.g., `emoji`)**:
-    *   Ensure the package is installed in the correct virtual environment (`.venv/lib/python3.13/site-packages`).
+    *   Ensure the package is installed in the correct virtual environment (`.venv/lib/python3.x/site-packages`).
     *   Ensure the path to this `site-packages` directory is correctly added to Python's `sys.path` by `PythonScriptExecutor.cs`.
     *   Verify `PYTHONHOME` is correctly set. 
