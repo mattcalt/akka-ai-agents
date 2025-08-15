@@ -67,6 +67,17 @@ It features a `RequestManagerActor` that receives simulated concurrent requests.
             ```
         *   This is used by the Python agent (`Scripts/chat_agent/agent.py`).
 
+    *   **`OPENAI_MODEL`** (Optional): The model name to use for LLM requests.
+        *   Default: `gpt-4o-mini` (if not specified)
+        *   Examples:
+            ```bash
+            export OPENAI_MODEL="gpt-4o-mini"           # OpenAI GPT-4o mini (default)
+            export OPENAI_MODEL="gpt-4o"                # OpenAI GPT-4o
+            export OPENAI_MODEL="claude-3-sonnet"       # Anthropic Claude (via proxy)
+            export OPENAI_MODEL="gemini-pro"            # Google Gemini (via proxy)
+            ```
+        *   This is used by the Python agent to specify which model the LiteLLM proxy should use.
+
     *   **Optional: `PYTHONPATH`** (for reference, primarily handled by C# code during runtime)
         The C# `PythonScriptExecutor` dynamically adds all necessary paths to Python's `sys.path` at runtime. This includes the application's output directory (where scripts are copied) and the Python virtual environment's `site-packages`. Therefore, setting `PYTHONPATH` manually in your shell is generally **not required** for this application to function correctly.
 

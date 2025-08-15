@@ -43,7 +43,7 @@ class ChatAgent:
         logger.info(f"_build_agent: Building with session_id: {session_id_for_build}, user_id: {user_id_for_build}")
 
         current_llm = LiteLlm(
-            model='gpt-4o-mini',
+            model=os.environ.get('OPENAI_MODEL', 'gpt-4o-mini'),
             api_base=os.environ['OPENAI_BASE'],
             api_key=os.environ['OPENAI_KEY'],
             user=user_id_for_build,
